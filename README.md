@@ -31,6 +31,7 @@ TypeScript](https://github.com/timfish/bincode-typescript/blob/master/tests/test
 - Serde attributes are not currently respected
 - `Vec<T>` are always converted to `Uint8Array/Int8Array/etc` whenever possible
   and this might not be particularly ergonomic from TypeScript.
+- Generated code will not work on node < v11 due to the global usage of `TextEncoder/TextDecoder`
 
 ## Example via `build.rs`
 
