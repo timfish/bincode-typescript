@@ -8,10 +8,10 @@ export type {{ident}} =
         {%- if types.len() == 1 %}  
   | { tag: '{{ident}}'; value: {{ variant.first_type().ts_type() }} }
         {%- else %}
-  | { tag: '{{ident}}', value: {{type_variant}}_{{ident}} }
+  | { tag: '{{ident}}'; value: {{type_variant}}_{{ident}} }
         {%- endif -%}
       {%- when EnumVariantDeclaration::Named with { ident, types } %}
-  | { tag: '{{ident}}', value: {{type_variant}}_{{ident}} }
+  | { tag: '{{ident}}'; value: {{type_variant}}_{{ident}} }
     {%- endmatch -%}
   {% endfor -%} 
 ;
@@ -21,14 +21,14 @@ export type {{ident}} =
         {%- if types.len() > 1 %}  
 export interface {{type_variant}}_{{ident}} {
           {%- for ty in types %}
-  {{ loop.index - 1 }}: {{ ty.ts_type() }},
+  {{ loop.index - 1 }}: {{ ty.ts_type() }};
           {%- endfor %} 
 }
         {% endif -%}
       {%- when EnumVariantDeclaration::Named with { ident, types } %}
 export interface {{type_variant}}_{{ident}} {
           {%- for (id, ty) in types %}
-  {{ id }}: {{ ty.ts_type() }},
+  {{ id }}: {{ ty.ts_type() }};
           {%- endfor %} 
 }
       {% else %}

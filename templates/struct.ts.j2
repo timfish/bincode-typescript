@@ -16,9 +16,9 @@ export function write{{ident}}(value: {{ident}}, sinkOrBuf?: SinkOrBuf): Sink {
 {%- for (id, ty) in fields -%}
   {%- match id -%}
     {%- when Some with (id) %}
-  {{ ty.writer() }}(value.{{id}}, sink)
+  {{ ty.writer() }}(value.{{id}}, sink);
     {%- when None %}
-  {{ ty.writer() }}(value[{{loop.index - 1}}], sink)
+  {{ ty.writer() }}(value[{{loop.index - 1}}], sink);
   {%- endmatch%}
 {%- endfor %} 
   return sink;

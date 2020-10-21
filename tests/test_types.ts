@@ -90,34 +90,34 @@ export type SomeEvent =
   | { tag: 'Unit' }  
   | { tag: 'UnnamedSingle'; value: number }  
   | { tag: 'UnnamedSingleUnitEnum'; value: Array<UnitEnum> | undefined }
-  | { tag: 'UnnamedMultiple', value: SomeEvent_UnnamedMultiple }
-  | { tag: 'Named', value: SomeEvent_Named }  
+  | { tag: 'UnnamedMultiple'; value: SomeEvent_UnnamedMultiple }
+  | { tag: 'Named'; value: SomeEvent_Named }  
   | { tag: 'UnnamedStruct'; value: NamedStruct }  
   | { tag: 'UnnamedHashMap'; value: Map<string, UnitEnum> | undefined }
-  | { tag: 'NamedStruct', value: SomeEvent_NamedStruct };
+  | { tag: 'NamedStruct'; value: SomeEvent_NamedStruct };
         
 export interface SomeEvent_UnnamedMultiple {
-  0: number,
-  1: number,
-  2: number,
-  3: number,
-  4: number,
-  5: number,
-  6: bigint,
-  7: bigint,
-  8: bigint,
-  9: bigint,
-  10: bigint,
-  11: bigint,
-  12: boolean, 
+  0: number;
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+  6: bigint;
+  7: bigint;
+  8: bigint;
+  9: bigint;
+  10: bigint;
+  11: bigint;
+  12: boolean; 
 }
         
 export interface SomeEvent_Named {
-  length: bigint,
-  interval: number, 
+  length: bigint;
+  interval: number; 
 }
 export interface SomeEvent_NamedStruct {
-  inner: NamedStruct, 
+  inner: NamedStruct; 
 } 
 
 export module SomeEvent { 
@@ -256,8 +256,8 @@ export interface TupleStruct {
 
 export function writeTupleStruct(value: TupleStruct, sinkOrBuf?: SinkOrBuf): Sink {
   const sink = Sink.create(sinkOrBuf);
-  writeI32(value[0], sink)
-  writeTypedArray<Uint32Array>(value[1], sink) 
+  writeI32(value[0], sink);
+  writeTypedArray<Uint32Array>(value[1], sink); 
   return sink;
 }
 
@@ -278,10 +278,10 @@ export interface NamedStruct {
 
 export function writeNamedStruct(value: NamedStruct, sinkOrBuf?: SinkOrBuf): Sink {
   const sink = Sink.create(sinkOrBuf);
-  writeOption(writeU8)(value.zero, sink)
-  writeF64(value.one, sink)
-  writeU8(value.two, sink)
-  writeString(value.three, sink) 
+  writeOption(writeU8)(value.zero, sink);
+  writeF64(value.one, sink);
+  writeU8(value.two, sink);
+  writeString(value.three, sink); 
   return sink;
 }
 
