@@ -18,10 +18,15 @@ I'm pretty new to Rust and I've just hacked around until the tests pass 🤷‍�
 
 There is much room for improvement and PRs are welcome!
 
+Check out the [Rust
+code](https://github.com/timfish/bincode-typescript/blob/master/tests/test_types.rs)
+used in the tests and the [generated
+TypeScript](https://github.com/timfish/bincode-typescript/blob/master/tests/test_types.ts) code.
+
 ## Current Issues & Limitations
 
 - All values must be owned
-- Generic structs/enums will almost certainly panic
+- Generic structs/enums will almost certainly cause a panic
 - All types must be in a single file
 - Serde attributes are not currently respected
 - `Vec<T>` are always converted to `Uint8Array/Int8Array/etc` whenever possible
