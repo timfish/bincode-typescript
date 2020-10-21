@@ -1,0 +1,13 @@
+{
+  "name": "bincode-typescript",
+  "version": "0.1.0",
+  "main": "index.js",
+  "author": "Tim Fish <tim@timfish.uk>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^12.12.2",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.3",
+    "get-stdin": "^8.0.0"
+  }
+}

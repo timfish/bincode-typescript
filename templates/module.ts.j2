@@ -1,0 +1,11 @@
+// This file was auto-generated from Rust code by {{pkg_name}} v{{pkg_version}}
+
+{% for e in enums -%}
+  {{e}}
+{% endfor %}
+
+{% for s in structs -%}
+  {{s}}
+{% endfor %}
+
+{% include "runtime.ts.j2" %}
