@@ -1,45 +1,28 @@
 pub mod test_types;
 
 #[cfg(test)]
-mod tests {
+mod test_round_trip {
+    use serde::{de::DeserializeOwned, Serialize};
+
     use super::test_types::*;
     use std::{
         collections::HashMap,
+        fmt::Debug,
         fs,
         io::Write,
-        process::{Child, Command, Stdio},
+        path::Path,
+        process::{Command, Stdio},
     };
-
-    #[cfg(target_os = "windows")]
-    static TS_BIN: &str = "./node_modules/.bin/tsc.cmd";
-    #[cfg(not(target_os = "windows"))]
-    static TS_BIN: &str = "./node_modules/.bin/tsc";
 
     #[cfg(target_os = "windows")]
     static TS_NODE_BIN: &str = "./node_modules/.bin/ts-node.cmd";
     #[cfg(not(target_os = "windows"))]
     static TS_NODE_BIN: &str = "./node_modules/.bin/ts-node";
 
-    fn get_test_code(generated_path: &str, assert_code: &str) -> String {
+    fn get_test_code(api_path: &Path, test_code: &str) -> String {
         format!(
             "
-import {{
-    UnitEnum,
-    readUnitEnum,
-    writeUnitEnum,
-    UnitEnumNumbered,
-    readUnitEnumNumbered,
-    writeUnitEnumNumbered,
-    TupleStruct,
-    readTupleStruct,
-    writeTupleStruct,
-    NamedStruct,
-    readNamedStruct,
-    writeNamedStruct,
-    SomeEvent,
-    readSomeEvent,
-    writeSomeEvent
-}} from '{}';
+import * as api from '{}';
 const assert = require('assert');
 const getStdin = require('get-stdin');
 
@@ -48,214 +31,136 @@ process.on('unhandledRejection', (error: Error) => {{
     process.exit(1);
 }});
 
-function send(data: Uint8Array) {{
-    process.stdout.write(data);
-    process.stdout.end();
+function test(buffer: Buffer): api.Sink {{
+    {}
 }}
 
 (async function main() {{
-    let buffer = await getStdin.buffer();
-
-    {}
+    let inBuf = await getStdin.buffer();
+    let outBuf = test(inBuf).getUint8Array();
+    process.stdout.write(outBuf);
 }})();
         ",
-            generated_path.replace("\\", "\\\\").replace(".ts", ""),
-            assert_code
+            api_path
+                .to_string_lossy()
+                .replace("\\", "\\\\")
+                .replace(".ts", ""),
+            test_code
         )
     }
 
-    fn generate_and_run(assert_code: &str) -> (tempfile::TempDir, Child) {
+    fn generate_and_run<T>(test_type: T, test_code: &str)
+    where
+        T: PartialEq + Debug + Serialize + DeserializeOwned,
+    {
         let dir = tempfile::tempdir_in("./tests").unwrap();
-        let generated_path = dir.path().join("generated.ts");
-        let tests_path = dir.path().join("test.ts");
+        let gen_path = dir.path().join("generated.ts");
+        let test_path = dir.path().join("test.ts");
 
-        bincode_typescript::from_file("./tests/test_types.rs", &generated_path, true).unwrap();
+        bincode_typescript::from_file("./tests/test_types.rs", &gen_path, true).unwrap();
 
-        let code = get_test_code(&generated_path.to_str().unwrap(), assert_code);
-        fs::write(&tests_path, code).unwrap();
+        let code = get_test_code(&gen_path, test_code);
+        fs::write(&test_path, code).unwrap();
 
-        (
-            dir,
-            Command::new(TS_NODE_BIN)
-                .args(&[tests_path])
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .spawn()
-                .expect("failed to spawn process"),
-        )
-    }
+        let mut child = Command::new(TS_NODE_BIN)
+            .args(&[test_path])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn process");
 
-    #[test]
-    fn builds_without_errors_strict() {
-        let dir = tempfile::tempdir_in("./tests").unwrap();
-        let out_path = dir.path().join("api.ts");
+        let child_stdin = child.stdin.as_mut().expect("failed to get stdin");
 
-        bincode_typescript::from_file("./tests/test_types.rs", &out_path, true).unwrap();
+        let encoded: Vec<u8> = bincode::serialize(&test_type).unwrap();
+        child_stdin.write_all(&encoded).unwrap();
 
-        let status = Command::new(TS_BIN)
-            .args(&[
-                "--strict",
-                "--declaration",
-                "--noEmitOnError",
-                "--noImplicitAny",
-                "--noImplicitReturns",
-                "--noFallthroughCasesInSwitch",
-                "--noUnusedLocals",
-                "--noUnusedParameters",
-                "--target",
-                "ES6",
-                "--lib",
-                "ES6,DOM,ESNext.BigInt",
-                &out_path.to_str().unwrap(),
-            ])
-            .status()
-            .expect("failed to start process");
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
 
-        assert!(status.success());
+        let returned_type: T = bincode::deserialize(&output.stdout).unwrap();
+        assert_eq!(test_type, returned_type);
     }
 
     #[test]
     fn unit_enum() {
-        let (_d, mut child) = generate_and_run(
+        generate_and_run(
+            UnitEnum::Three,
             "
-        let val = readUnitEnum(buffer);
-        assert.deepStrictEqual(val, UnitEnum.Three);
+        let val = api.readUnitEnum(buffer);
+        assert.deepStrictEqual(val, api.UnitEnum.Three);
 
-        send(writeUnitEnum(UnitEnum.Three).getUint8Array());
+        return api.writeUnitEnum(api.UnitEnum.Three);
         ",
         );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-        let encoded: Vec<u8> = bincode::serialize(&UnitEnum::Three).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: UnitEnum = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(UnitEnum::Three, back);
     }
 
     #[test]
-    fn unit_enum_values() {
-        let (_d, mut child) = generate_and_run(
+    fn unit_enum_valued() {
+        generate_and_run(
+            UnitEnumNumbered::Eight,
             "
-        let val = readUnitEnumNumbered(buffer);
-        assert.deepStrictEqual(val, UnitEnumNumbered.Eight);
+        let val = api.readUnitEnumNumbered(buffer);
+        assert.deepStrictEqual(val, api.UnitEnumNumbered.Eight);
         assert.deepStrictEqual(val, 8);
 
-        send(writeUnitEnumNumbered(UnitEnumNumbered.Eight).getUint8Array());
+        return api.writeUnitEnumNumbered(api.UnitEnumNumbered.Eight)
         ",
         );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-        let encoded: Vec<u8> = bincode::serialize(&UnitEnumNumbered::Eight).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: UnitEnumNumbered = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(UnitEnumNumbered::Eight, back);
     }
 
     #[test]
     fn tuple_struct() {
-        let (_d, mut child) = generate_and_run(
+        generate_and_run(
+            TupleStruct(-145, vec![9987, 456]),
             "
-        let val = readTupleStruct(buffer);
-        let expected: TupleStruct = [-145, new Uint32Array([9987, 456])];
+        let val = api.readTupleStruct(buffer);
+        let expected: api.TupleStruct = [-145, new Uint32Array([9987, 456])];
         assert.deepStrictEqual(val, expected);
 
-        send(writeTupleStruct(expected).getUint8Array());
+        return api.writeTupleStruct(expected);
         ",
         );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-        let val = TupleStruct(-145, vec![9987, 456]);
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: TupleStruct = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
     }
 
     #[test]
     fn named_struct() {
-        let (_d, mut child) = generate_and_run(
+        generate_and_run(
+            NamedStruct {
+                zero: Some(28),
+                one: 1.23,
+                two: 128,
+                three: "something".to_string(),
+            },
             "
-        let val = readNamedStruct(buffer);
-        let expected = { one: 1.23, two: 128, three: 'something', zero: 28 };
+        let val = api.readNamedStruct(buffer);
+        let expected = { zero: 28, one: 1.23, two: 128, three: 'something' };
         assert.deepStrictEqual(val, expected);
 
-        send(writeNamedStruct(expected).getUint8Array());
+        return api.writeNamedStruct(expected);
         ",
         );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-
-        let val = NamedStruct {
-            zero: Some(28),
-            one: 1.23,
-            two: 128,
-            three: "something".to_string(),
-        };
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: NamedStruct = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
     }
 
     #[test]
-    fn complex_enum() {
-        let (_d, mut child) = generate_and_run(
+    fn named_enum_variant() {
+        generate_and_run(
+            SomeEvent::Named {
+                length: 34567,
+                interval: 0.0001,
+            },
             "
-        let val = readSomeEvent(buffer);
-        let expected = SomeEvent.Named({ length: BigInt(34567), interval: 0.0001 });
+        let val = api.readSomeEvent(buffer);
+        let expected = api.SomeEvent.Named({ length: BigInt(34567), interval: 0.0001 });
         assert.deepStrictEqual(val, expected);
 
-        send(writeSomeEvent(expected).getUint8Array());
+        return api.writeSomeEvent(expected);
         ",
         );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-
-        let val = SomeEvent::Named {
-            length: 34567,
-            interval: 0.0001,
-        };
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: SomeEvent = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
     }
 
     #[test]
-    fn complex_enum_numbers() {
-        let (_d, mut child) = generate_and_run(
-            "
-        let val = readSomeEvent(buffer);
-        let expected = SomeEvent.UnnamedMultiple(1, -2, 3, -4, 5, -6, BigInt(1152921504606846976), BigInt(-8), BigInt(9), BigInt(-10), BigInt(11), BigInt(-12), false);
-        assert.deepStrictEqual(val, expected);
-
-        send(writeSomeEvent(expected).getUint8Array());
-        ",
-        );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-
-        let val = SomeEvent::UnnamedMultiple(
+    fn unnamed_enum_many_numbers() {
+        generate_and_run(SomeEvent::UnnamedMultiple(
             1,
             -2,
             3,
@@ -269,75 +174,51 @@ function send(data: Uint8Array) {{
             11,
             -12,
             false,
+        ),
+            "
+        let val = api.readSomeEvent(buffer);
+        let expected = api.SomeEvent.UnnamedMultiple(1, -2, 3, -4, 5, -6, BigInt(1152921504606846976), BigInt(-8), BigInt(9), BigInt(-10), BigInt(11), BigInt(-12), false);
+        assert.deepStrictEqual(val, expected);
+
+        return api.writeSomeEvent(expected);
+        ",
         );
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: SomeEvent = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
     }
 
     #[test]
-    fn struct_in_enum() {
-        let (_d, mut child) = generate_and_run(
-            "
-        let val = readSomeEvent(buffer);
-        let expected = SomeEvent.NamedStruct({ inner: { one: 1.23, two: 128, three: 'something', zero: undefined }});
-        assert.deepStrictEqual(val, expected);
-
-        send(writeSomeEvent(expected).getUint8Array());
-        ",
-        );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-
-        let val = SomeEvent::NamedStruct {
+    fn named_struct_in_enum() {
+        generate_and_run(SomeEvent::NamedStruct {
             inner: NamedStruct {
                 zero: None,
                 one: 1.23,
                 two: 128,
                 three: "something".to_string(),
             },
-        };
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
+        },
+            "
+        let val = api.readSomeEvent(buffer);
+        let expected = api.SomeEvent.NamedStruct({ inner: { zero: undefined, one: 1.23, two: 128, three: 'something' }});
+        assert.deepStrictEqual(val, expected);
 
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: SomeEvent = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
+        return api.writeSomeEvent(expected);
+        ",
+        );
     }
 
     #[test]
     fn hashmap() {
-        let (_d, mut child) = generate_and_run(
-            "
-        let val = readSomeEvent(buffer);
-        let expected = SomeEvent.UnnamedHashMap(new Map([['Some', UnitEnum.One], ['More', UnitEnum.Three]]));
-        assert.deepStrictEqual(val, expected);
-
-        send(writeSomeEvent(expected).getUint8Array());
-        ",
-        );
-
-        let child_stdin = child.stdin.as_mut().expect("could not get stdin");
-
         let mut hm = HashMap::new();
         hm.insert("Some".to_string(), UnitEnum::One);
         hm.insert("More".to_string(), UnitEnum::Three);
         let val = SomeEvent::UnnamedHashMap(Some(hm));
+        generate_and_run(val,
+            "
+        let val = api.readSomeEvent(buffer);
+        let expected = api.SomeEvent.UnnamedHashMap(new Map([['Some', api.UnitEnum.One], ['More', api.UnitEnum.Three]]));
+        assert.deepStrictEqual(val, expected);
 
-        let encoded: Vec<u8> = bincode::serialize(&val).unwrap();
-        child_stdin.write_all(&encoded).unwrap();
-
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success());
-
-        let back: SomeEvent = bincode::deserialize(&output.stdout).unwrap();
-        assert_eq!(val, back);
+        return api.writeSomeEvent(expected);
+        ",
+        );
     }
 }
