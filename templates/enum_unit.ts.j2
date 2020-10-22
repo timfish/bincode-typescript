@@ -1,5 +1,5 @@
 export const enum {{ident}} {
-  {%- for variant in variants %}  
+  {%- for variant in variants %}
   {{variant.clone().ident()}} = {{variant.clone().value()}},
   {%- endfor %} 
 }
@@ -7,11 +7,11 @@ export const enum {{ident}} {
 export function write{{ident}}(value: {{ident}}, sinkOrBuf?: SinkOrBuf,): Sink {
   const sink = Sink.create(sinkOrBuf);
   switch (value) {
-  {%- for variant in variants %}  
-    case {{variant.clone().value()}}: 
-      writeU32({{ loop.index - 1 }}, sink); 
+  {%- for variant in variants %}
+    case {{variant.clone().value()}}:
+      writeU32({{ loop.index - 1 }}, sink);
       break;
-  {%- endfor %} 
+  {%- endfor %}
     default:
       throw new Error(`'${value}' is invalid value for enum '{{ident}}'`);
   }
@@ -23,10 +23,10 @@ export function read{{ident}}(sinkOrBuf: SinkOrBuf): {{ident}} {
   const sink = Sink.create(sinkOrBuf);
   const value = readU32(sink);
   switch (value) {
-  {%- for variant in variants %}  
-    case {{ loop.index - 1 }}: 
+  {%- for variant in variants %}
+    case {{ loop.index - 1 }}:
       return {{variant.clone().value()}};
-  {%- endfor %} 
+  {%- endfor %}
     default:
       throw new Error(`'${value}' is invalid value for enum '{{ident}}'`);
   }

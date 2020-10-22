@@ -87,7 +87,8 @@ function test(buffer: Buffer): api.Sink {{
             UnitEnum::Three,
             "
         let val = api.readUnitEnum(buffer);
-        assert.deepStrictEqual(val, api.UnitEnum.Three);
+        let expected = api.UnitEnum.Three;
+        assert.deepStrictEqual(val, expected);
 
         return api.writeUnitEnum(api.UnitEnum.Three);
         ",
@@ -100,10 +101,11 @@ function test(buffer: Buffer): api.Sink {{
             UnitEnumNumbered::Eight,
             "
         let val = api.readUnitEnumNumbered(buffer);
-        assert.deepStrictEqual(val, api.UnitEnumNumbered.Eight);
+        let expected = api.UnitEnumNumbered.Eight;
+        assert.deepStrictEqual(val, expected);
         assert.deepStrictEqual(val, 8);
 
-        return api.writeUnitEnumNumbered(api.UnitEnumNumbered.Eight)
+        return api.writeUnitEnumNumbered(expected);
         ",
         );
     }
@@ -160,24 +162,39 @@ function test(buffer: Buffer): api.Sink {{
 
     #[test]
     fn unnamed_enum_many_numbers() {
-        generate_and_run(SomeEvent::UnnamedMultiple(
-            1,
-            -2,
-            3,
-            -4,
-            5,
-            -6,
-            1152921504606846976,
-            -8,
-            9,
-            -10,
-            11,
-            -12,
-            false,
-        ),
+        generate_and_run(
+            SomeEvent::UnnamedMultiple(
+                1,
+                -2,
+                3,
+                -4,
+                5,
+                -6,
+                1152921504606846976,
+                -8152921504606846976,
+                9,
+                -10,
+                11,
+                -12,
+                false,
+            ),
             "
         let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.UnnamedMultiple(1, -2, 3, -4, 5, -6, BigInt(1152921504606846976), BigInt(-8), BigInt(9), BigInt(-10), BigInt(11), BigInt(-12), false);
+        let expected = api.SomeEvent.UnnamedMultiple(
+            1, 
+            -2, 
+            3, 
+            -4, 
+            5, 
+            -6, 
+            BigInt(1152921504606846976), 
+            BigInt(-8152921504606846976), 
+            BigInt(9), 
+            BigInt(-10), 
+            BigInt(11), 
+            BigInt(-12), 
+            false
+        );
         assert.deepStrictEqual(val, expected);
 
         return api.writeSomeEvent(expected);
@@ -187,17 +204,36 @@ function test(buffer: Buffer): api.Sink {{
 
     #[test]
     fn named_struct_in_enum() {
-        generate_and_run(SomeEvent::NamedStruct {
-            inner: NamedStruct {
-                zero: None,
-                one: 1.23,
-                two: 128,
-                three: "something".to_string(),
+        generate_and_run(
+            SomeEvent::NamedStruct {
+                inner: NamedStruct {
+                    zero: None,
+                    one: 1.23,
+                    two: 128,
+                    three: "something".to_string(),
+                },
             },
-        },
             "
         let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.NamedStruct({ inner: { zero: undefined, one: 1.23, two: 128, three: 'something' }});
+        let expected = api.SomeEvent.NamedStruct({ 
+            inner: { zero: undefined, one: 1.23, two: 128, three: 'something' }
+        });
+        assert.deepStrictEqual(val, expected);
+
+        return api.writeSomeEvent(expected);
+        ",
+        );
+    }
+
+    #[test]
+    fn unnamed_optional_vec() {
+        generate_and_run(
+            SomeEvent::UnnamedOptVec(Some(vec![128; 1000])),
+            "
+        let val = api.readSomeEvent(buffer);
+        let arr = new Uint8Array(1000);
+        arr.fill(128);
+        let expected = api.SomeEvent.UnnamedOptVec(arr);
         assert.deepStrictEqual(val, expected);
 
         return api.writeSomeEvent(expected);
@@ -207,14 +243,25 @@ function test(buffer: Buffer): api.Sink {{
 
     #[test]
     fn hashmap() {
-        let mut hm = HashMap::new();
-        hm.insert("Some".to_string(), UnitEnum::One);
-        hm.insert("More".to_string(), UnitEnum::Three);
-        let val = SomeEvent::UnnamedHashMap(Some(hm));
-        generate_and_run(val,
+        generate_and_run(
+            SomeEvent::UnnamedHashMap(Some(
+                vec![
+                    ("One".to_string(), UnitEnum::One),
+                    ("Two".to_string(), UnitEnum::Two),
+                    ("Three".to_string(), UnitEnum::Three),
+                ]
+                .into_iter()
+                .collect(),
+            )),
             "
         let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.UnnamedHashMap(new Map([['Some', api.UnitEnum.One], ['More', api.UnitEnum.Three]]));
+        let expected = api.SomeEvent.UnnamedHashMap(
+            new Map([
+                ['One', api.UnitEnum.One], 
+                ['Two', api.UnitEnum.Two],
+                ['Three', api.UnitEnum.Three],
+            ])
+        );
         assert.deepStrictEqual(val, expected);
 
         return api.writeSomeEvent(expected);

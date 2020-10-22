@@ -5,15 +5,15 @@ type SinkOrBuf = Sink | ArrayBuffer | Uint8Array;
 {% endif %}
 
 export class Sink {
-  view: DataView;
-  position: number;
+  public view: DataView;
+  public position: number;
 
-  constructor(input: ArrayBuffer) {
+  private constructor(input: ArrayBuffer) {
     this.view = new DataView(input);
     this.position = 0;
   }
 
-  reserve(extra: number): void {
+  public reserve(extra: number): void {
     if (this.position + extra <= this.view.buffer.byteLength) {
       return;
     }

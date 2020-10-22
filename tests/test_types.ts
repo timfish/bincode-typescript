@@ -1,23 +1,23 @@
 // This file was auto-generated from Rust code by bincode-typescript v0.1.0
 
-export const enum UnitEnum {  
-  One = 0,  
-  Two = 1,  
+export const enum UnitEnum {
+  One = 0,
+  Two = 1,
   Three = 2, 
 }
 
 export function writeUnitEnum(value: UnitEnum, sinkOrBuf?: SinkOrBuf,): Sink {
   const sink = Sink.create(sinkOrBuf);
-  switch (value) {  
-    case 0: 
-      writeU32(0, sink); 
-      break;  
-    case 1: 
-      writeU32(1, sink); 
-      break;  
-    case 2: 
-      writeU32(2, sink); 
-      break; 
+  switch (value) {
+    case 0:
+      writeU32(0, sink);
+      break;
+    case 1:
+      writeU32(1, sink);
+      break;
+    case 2:
+      writeU32(2, sink);
+      break;
     default:
       throw new Error(`'${value}' is invalid value for enum 'UnitEnum'`);
   }
@@ -28,40 +28,40 @@ export function writeUnitEnum(value: UnitEnum, sinkOrBuf?: SinkOrBuf,): Sink {
 export function readUnitEnum(sinkOrBuf: SinkOrBuf): UnitEnum {
   const sink = Sink.create(sinkOrBuf);
   const value = readU32(sink);
-  switch (value) {  
-    case 0: 
-      return 0;  
-    case 1: 
-      return 1;  
-    case 2: 
-      return 2; 
+  switch (value) {
+    case 0:
+      return 0;
+    case 1:
+      return 1;
+    case 2:
+      return 2;
     default:
       throw new Error(`'${value}' is invalid value for enum 'UnitEnum'`);
   }
 }
 
-export const enum UnitEnumNumbered {  
-  One = 1,  
-  Two = 2,  
-  Four = 4,  
+export const enum UnitEnumNumbered {
+  One = 1,
+  Two = 2,
+  Four = 4,
   Eight = 8, 
 }
 
 export function writeUnitEnumNumbered(value: UnitEnumNumbered, sinkOrBuf?: SinkOrBuf,): Sink {
   const sink = Sink.create(sinkOrBuf);
-  switch (value) {  
-    case 1: 
-      writeU32(0, sink); 
-      break;  
-    case 2: 
-      writeU32(1, sink); 
-      break;  
-    case 4: 
-      writeU32(2, sink); 
-      break;  
-    case 8: 
-      writeU32(3, sink); 
-      break; 
+  switch (value) {
+    case 1:
+      writeU32(0, sink);
+      break;
+    case 2:
+      writeU32(1, sink);
+      break;
+    case 4:
+      writeU32(2, sink);
+      break;
+    case 8:
+      writeU32(3, sink);
+      break;
     default:
       throw new Error(`'${value}' is invalid value for enum 'UnitEnumNumbered'`);
   }
@@ -72,27 +72,28 @@ export function writeUnitEnumNumbered(value: UnitEnumNumbered, sinkOrBuf?: SinkO
 export function readUnitEnumNumbered(sinkOrBuf: SinkOrBuf): UnitEnumNumbered {
   const sink = Sink.create(sinkOrBuf);
   const value = readU32(sink);
-  switch (value) {  
-    case 0: 
-      return 1;  
-    case 1: 
-      return 2;  
-    case 2: 
-      return 4;  
-    case 3: 
-      return 8; 
+  switch (value) {
+    case 0:
+      return 1;
+    case 1:
+      return 2;
+    case 2:
+      return 4;
+    case 3:
+      return 8;
     default:
       throw new Error(`'${value}' is invalid value for enum 'UnitEnumNumbered'`);
   }
 }
 
-export type SomeEvent = 
-  | { tag: 'Unit' }  
-  | { tag: 'UnnamedSingle'; value: number }  
+export type SomeEvent =
+  | { tag: 'Unit' }
+  | { tag: 'UnnamedSingle'; value: number }
+  | { tag: 'UnnamedOptVec'; value: Uint8Array | undefined }
   | { tag: 'UnnamedSingleUnitEnum'; value: Array<UnitEnum> | undefined }
   | { tag: 'UnnamedMultiple'; value: SomeEvent_UnnamedMultiple }
-  | { tag: 'Named'; value: SomeEvent_Named }  
-  | { tag: 'UnnamedStruct'; value: NamedStruct }  
+  | { tag: 'Named'; value: SomeEvent_Named }
+  | { tag: 'UnnamedWithStruct'; value: NamedStruct }
   | { tag: 'UnnamedHashMap'; value: Map<string, UnitEnum> | undefined }
   | { tag: 'NamedStruct'; value: SomeEvent_NamedStruct };
         
@@ -114,19 +115,20 @@ export interface SomeEvent_UnnamedMultiple {
         
 export interface SomeEvent_Named {
   length: bigint;
-  interval: number; 
+  interval: number;
 }
 export interface SomeEvent_NamedStruct {
-  inner: NamedStruct; 
+  inner: NamedStruct;
 } 
 
-export module SomeEvent { 
-  export const Unit: SomeEvent = { tag: 'Unit' };  
-  export const UnnamedSingle = (value: number): SomeEvent => ({ tag: 'UnnamedSingle', value });  
+export module SomeEvent {
+  export const Unit: SomeEvent = { tag: 'Unit' };
+  export const UnnamedSingle = (value: number): SomeEvent => ({ tag: 'UnnamedSingle', value });
+  export const UnnamedOptVec = (value: Uint8Array | undefined): SomeEvent => ({ tag: 'UnnamedOptVec', value });
   export const UnnamedSingleUnitEnum = (value: Array<UnitEnum> | undefined): SomeEvent => ({ tag: 'UnnamedSingleUnitEnum', value });
   export const UnnamedMultiple = (p0: number,p1: number,p2: number,p3: number,p4: number,p5: number,p6: bigint,p7: bigint,p8: bigint,p9: bigint,p10: bigint,p11: bigint,p12: boolean,): SomeEvent => ({ tag: 'UnnamedMultiple', value: [p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,] });
-  export const Named = (value: SomeEvent_Named): SomeEvent => ({ tag: 'Named', value });  
-  export const UnnamedStruct = (value: NamedStruct): SomeEvent => ({ tag: 'UnnamedStruct', value });  
+  export const Named = (value: SomeEvent_Named): SomeEvent => ({ tag: 'Named', value });
+  export const UnnamedWithStruct = (value: NamedStruct): SomeEvent => ({ tag: 'UnnamedWithStruct', value });
   export const UnnamedHashMap = (value: Map<string, UnitEnum> | undefined): SomeEvent => ({ tag: 'UnnamedHashMap', value });
   export const NamedStruct = (value: SomeEvent_NamedStruct): SomeEvent => ({ tag: 'NamedStruct', value }); 
 }
@@ -134,57 +136,61 @@ export module SomeEvent {
 export function writeSomeEvent(value: SomeEvent, sinkOrBuf?: SinkOrBuf): Sink {
   const sink = Sink.create(sinkOrBuf);
   switch(value.tag) {
-  
-    case 'Unit': 
+    case 'Unit':
       writeU32(0, sink);
-      break;  
-    case 'UnnamedSingle': 
-      writeU32(1, sink);  
-      const val2 = value as { tag: 'UnnamedSingle'; value: number };
+      break;
+    case 'UnnamedSingle':
+      writeU32(1, sink);
+      const val2 = value as { value: number };
       writeF32(val2.value, sink);
-      break;  
-    case 'UnnamedSingleUnitEnum': 
-      writeU32(2, sink);  
-      const val3 = value as { tag: 'UnnamedSingleUnitEnum'; value: Array<UnitEnum> | undefined };
-      writeOption(writeSeq(writeUnitEnum))(val3.value, sink);
-      break;  
-    case 'UnnamedMultiple': 
+      break;
+    case 'UnnamedOptVec':
+      writeU32(2, sink);
+      const val3 = value as { value: Uint8Array | undefined };
+      writeOption(writeTypedArray)(val3.value, sink);
+      break;
+    case 'UnnamedSingleUnitEnum':
       writeU32(3, sink);
-      const val4 = value as { tag: 'UnnamedMultiple', value: SomeEvent_UnnamedMultiple };
-      writeU8(val4.value[0], sink);
-      writeI8(val4.value[1], sink);
-      writeU16(val4.value[2], sink);
-      writeI16(val4.value[3], sink);
-      writeU32(val4.value[4], sink);
-      writeI32(val4.value[5], sink);
-      writeU64(val4.value[6], sink);
-      writeI64(val4.value[7], sink);
-      writeU128(val4.value[8], sink);
-      writeI128(val4.value[9], sink);
-      writeUSize(val4.value[10], sink);
-      writeISize(val4.value[11], sink);
-      writeBool(val4.value[12], sink);
-      break;  
-    case 'Named': 
+      const val4 = value as { value: Array<UnitEnum> | undefined };
+      writeOption(writeSeq(writeUnitEnum))(val4.value, sink);
+      break;
+    case 'UnnamedMultiple':
       writeU32(4, sink);
-      const val5 = value as { tag: 'Named', value: SomeEvent_Named };
-      writeUSize(val5.value.length, sink);
-      writeF64(val5.value.interval, sink);
-      break;  
-    case 'UnnamedStruct': 
-      writeU32(5, sink);  
-      const val6 = value as { tag: 'UnnamedStruct'; value: NamedStruct };
-      writeNamedStruct(val6.value, sink);
-      break;  
-    case 'UnnamedHashMap': 
-      writeU32(6, sink);  
-      const val7 = value as { tag: 'UnnamedHashMap'; value: Map<string, UnitEnum> | undefined };
-      writeOption(writeMap(writeString, writeUnitEnum))(val7.value, sink);
-      break;  
-    case 'NamedStruct': 
+      const val5 = value as { value: SomeEvent_UnnamedMultiple };
+      writeU8(val5.value[0], sink);
+      writeI8(val5.value[1], sink);
+      writeU16(val5.value[2], sink);
+      writeI16(val5.value[3], sink);
+      writeU32(val5.value[4], sink);
+      writeI32(val5.value[5], sink);
+      writeU64(val5.value[6], sink);
+      writeI64(val5.value[7], sink);
+      writeU128(val5.value[8], sink);
+      writeI128(val5.value[9], sink);
+      writeUSize(val5.value[10], sink);
+      writeISize(val5.value[11], sink);
+      writeBool(val5.value[12], sink);
+      break;
+    case 'Named':
+      writeU32(5, sink);
+      const val6 = value as { value: SomeEvent_Named };
+      writeUSize(val6.value.length, sink);
+      writeF64(val6.value.interval, sink);
+      break;
+    case 'UnnamedWithStruct':
+      writeU32(6, sink);
+      const val7 = value as { value: NamedStruct };
+      writeNamedStruct(val7.value, sink);
+      break;
+    case 'UnnamedHashMap':
       writeU32(7, sink);
-      const val8 = value as { tag: 'NamedStruct', value: SomeEvent_NamedStruct };
-      writeNamedStruct(val8.value.inner, sink);
+      const val8 = value as { value: Map<string, UnitEnum> | undefined };
+      writeOption(writeMap(writeString, writeUnitEnum))(val8.value, sink);
+      break;
+    case 'NamedStruct':
+      writeU32(8, sink);
+      const val9 = value as { value: SomeEvent_NamedStruct };
+      writeNamedStruct(val9.value.inner, sink);
       break; 
     default:
        throw new Error(`'${(value as any).tag}' is invalid tag for enum 'SomeEvent'`);
@@ -197,18 +203,21 @@ export function readSomeEvent(sinkOrBuf: SinkOrBuf): SomeEvent {
   const sink = Sink.create(sinkOrBuf);
   const value = readU32(sink);
   switch (value) {
-  
     case 0: 
-      return SomeEvent.Unit;  
+      return SomeEvent.Unit;
     case 1:
       return SomeEvent.UnnamedSingle(
         readF32(sink), 
-        );  
+        );
     case 2:
+      return SomeEvent.UnnamedOptVec(
+        readOption(readTypedArray(Uint8Array))(sink), 
+        );
+    case 3:
       return SomeEvent.UnnamedSingleUnitEnum(
         readOption(readSeq(readUnitEnum))(sink), 
-        );  
-    case 3:
+        );
+    case 4:
       return SomeEvent.UnnamedMultiple(
         readU8(sink),
         readI8(sink),
@@ -223,24 +232,24 @@ export function readSomeEvent(sinkOrBuf: SinkOrBuf): SomeEvent {
         readUSize(sink),
         readISize(sink),
         readBool(sink), 
-        );  
-    case 4:
+        );
+    case 5:
       return SomeEvent.Named({
         length: readUSize(sink),
-        interval: readF64(sink), 
-        });  
-    case 5:
-      return SomeEvent.UnnamedStruct(
-        readNamedStruct(sink), 
-        );  
+        interval: readF64(sink),
+        });
     case 6:
+      return SomeEvent.UnnamedWithStruct(
+        readNamedStruct(sink), 
+        );
+    case 7:
       return SomeEvent.UnnamedHashMap(
         readOption(readMap(readString, readUnitEnum))(sink), 
-        );  
-    case 7:
+        );
+    case 8:
       return SomeEvent.NamedStruct({
-        inner: readNamedStruct(sink), 
-        }); 
+        inner: readNamedStruct(sink),
+        });
     default:
       throw new Error(`'${value}' is invalid value for enum 'SomeEvent'`);
   }
@@ -257,7 +266,7 @@ export interface TupleStruct {
 export function writeTupleStruct(value: TupleStruct, sinkOrBuf?: SinkOrBuf): Sink {
   const sink = Sink.create(sinkOrBuf);
   writeI32(value[0], sink);
-  writeTypedArray<Uint32Array>(value[1], sink); 
+  writeTypedArray(value[1], sink); 
   return sink;
 }
 
@@ -301,15 +310,15 @@ type SinkOrBuf = Sink | Buffer | ArrayBuffer | Uint8Array;
 
 
 export class Sink {
-  view: DataView;
-  position: number;
+  public view: DataView;
+  public position: number;
 
-  constructor(input: ArrayBuffer) {
+  private constructor(input: ArrayBuffer) {
     this.view = new DataView(input);
     this.position = 0;
   }
 
-  reserve(extra: number): void {
+  public reserve(extra: number): void {
     if (this.position + extra <= this.view.buffer.byteLength) {
       return;
     }

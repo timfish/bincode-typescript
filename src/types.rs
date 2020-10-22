@@ -86,7 +86,7 @@ impl RustType {
             RustType::String => "writeString".to_string(),
             RustType::Option(t) => format!("writeOption({})", t.writer()),
             RustType::Vec(t) => format!("writeSeq({})", t.writer()),
-            RustType::TypedArray(_) => format!("writeTypedArray<{0}>", self.ts_type()),
+            RustType::TypedArray(_) => "writeTypedArray".to_string(),
             RustType::HashMap(k, v) => format!("writeMap({}, {})", k.writer(), v.writer()),
             RustType::User(t) => format!("write{}", t),
         }

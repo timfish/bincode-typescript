@@ -31,6 +31,7 @@ pub struct NamedStruct {
 pub enum SomeEvent {
     Unit,
     UnnamedSingle(f32),
+    UnnamedOptVec(Option<Vec<u8>>),
     UnnamedSingleUnitEnum(Option<Vec<UnitEnum>>),
     UnnamedMultiple(
         u8,
@@ -51,7 +52,7 @@ pub enum SomeEvent {
         length: usize,
         interval: f64,
     },
-    UnnamedStruct(NamedStruct),
+    UnnamedWithStruct(NamedStruct),
     UnnamedHashMap(Option<HashMap<String, UnitEnum>>),
     NamedStruct {
         inner: NamedStruct,
