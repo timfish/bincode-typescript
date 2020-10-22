@@ -94,7 +94,7 @@ export type SomeEvent =
   | { tag: 'UnnamedMultiple'; value: SomeEvent_UnnamedMultiple }
   | { tag: 'Named'; value: SomeEvent_Named }
   | { tag: 'UnnamedWithStruct'; value: NamedStruct }
-  | { tag: 'UnnamedHashMap'; value: Map<string, UnitEnum> | undefined }
+  | { tag: 'UnnamedHashMap'; value: Map<string, UnitEnum | undefined> | undefined }
   | { tag: 'NamedStruct'; value: SomeEvent_NamedStruct };
         
 export interface SomeEvent_UnnamedMultiple {
@@ -129,7 +129,7 @@ export module SomeEvent {
   export const UnnamedMultiple = (p0: number,p1: number,p2: number,p3: number,p4: number,p5: number,p6: bigint,p7: bigint,p8: bigint,p9: bigint,p10: bigint,p11: bigint,p12: boolean,): SomeEvent => ({ tag: 'UnnamedMultiple', value: [p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,] });
   export const Named = (value: SomeEvent_Named): SomeEvent => ({ tag: 'Named', value });
   export const UnnamedWithStruct = (value: NamedStruct): SomeEvent => ({ tag: 'UnnamedWithStruct', value });
-  export const UnnamedHashMap = (value: Map<string, UnitEnum> | undefined): SomeEvent => ({ tag: 'UnnamedHashMap', value });
+  export const UnnamedHashMap = (value: Map<string, UnitEnum | undefined> | undefined): SomeEvent => ({ tag: 'UnnamedHashMap', value });
   export const NamedStruct = (value: SomeEvent_NamedStruct): SomeEvent => ({ tag: 'NamedStruct', value }); 
 }
 
@@ -184,8 +184,8 @@ export function writeSomeEvent(value: SomeEvent, sinkOrBuf?: SinkOrBuf): Sink {
       break;
     case 'UnnamedHashMap':
       writeU32(7, sink);
-      const val8 = value as { value: Map<string, UnitEnum> | undefined };
-      writeOption(writeMap(writeString, writeUnitEnum))(val8.value, sink);
+      const val8 = value as { value: Map<string, UnitEnum | undefined> | undefined };
+      writeOption(writeMap(writeString, writeOption(writeUnitEnum)))(val8.value, sink);
       break;
     case 'NamedStruct':
       writeU32(8, sink);
@@ -244,7 +244,7 @@ export function readSomeEvent(sinkOrBuf: SinkOrBuf): SomeEvent {
         );
     case 7:
       return SomeEvent.UnnamedHashMap(
-        readOption(readMap(readString, readUnitEnum))(sink), 
+        readOption(readMap(readString, readOption(readUnitEnum)))(sink), 
         );
     case 8:
       return SomeEvent.NamedStruct({
@@ -281,7 +281,7 @@ export function readTupleStruct(sinkOrBuf: SinkOrBuf): TupleStruct {
 export interface NamedStruct {
   zero: number | undefined;
   one: number;
-  two: number;
+  two: [number, UnitEnum];
   three: string;
 }
 
@@ -289,7 +289,7 @@ export function writeNamedStruct(value: NamedStruct, sinkOrBuf?: SinkOrBuf): Sin
   const sink = Sink.create(sinkOrBuf);
   writeOption(writeU8)(value.zero, sink);
   writeF64(value.one, sink);
-  writeU8(value.two, sink);
+  writeTuple<[number, UnitEnum]>(writeU8, writeUnitEnum)(value.two, sink);
   writeString(value.three, sink); 
   return sink;
 }
@@ -299,7 +299,7 @@ export function readNamedStruct(sinkOrBuf: SinkOrBuf): NamedStruct {
   return {
     zero: readOption(readU8)(sink),
     one: readF64(sink),
-    two: readU8(sink),
+    two: readTuple<[number, UnitEnum]>(readU8, readUnitEnum)(sink),
     three: readString(sink), 
   };
 }
@@ -581,7 +581,7 @@ function writeBytes(value: Uint8Array, sink: Sink): Sink {
 }
 
 function readBytes(sink: Sink, length: number): Uint8Array {
-  let bytes = sink.view.buffer.slice(sink.position, sink.position + length);
+  const bytes = sink.view.buffer.slice(sink.position, sink.position + length);
   sink.position += length;
   return new Uint8Array(bytes);
 }
@@ -595,7 +595,7 @@ function writeString(value: string, sink: Sink): Sink {
 
 function readString(sink: Sink): string {
   const length = readU64(sink);
-  let bytes = readBytes(sink, Number(length));
+  const bytes = readBytes(sink, Number(length));
   return textDecoder.decode(bytes);
 }
 
@@ -617,7 +617,7 @@ function readOption<T>(
   readFunc: (sink: Sink) => T
 ): (sink: Sink) => T | undefined {
   return (sink: Sink) => {
-    let some = readBool(sink);
+    const some = readBool(sink);
     if (!some) {
       return undefined;
     }
@@ -642,9 +642,8 @@ function writeSeq<T>(
 
 function readSeq<T>(readFunc: (sink: Sink) => T): (sink: Sink) => Array<T> {
   return (sink: Sink) => {
-    let length = readU64(sink);
-
-    let output = new Array();
+    const length = readU64(sink);
+    const output = new Array();
 
     for (var i = 0; i < length; i++) {
       output.push(readFunc(sink));
@@ -682,8 +681,8 @@ function readTypedArray<T extends TypedArray>(
   array_type: TypedArrayConstructor<T>
 ): (sink: Sink) => T {
   return (sink: Sink) => {
-    let length = readU64(sink);
-    let bytes = readBytes(sink, Number(length) * array_type.BYTES_PER_ELEMENT);
+    const length = readU64(sink);
+    const bytes = readBytes(sink, Number(length) * array_type.BYTES_PER_ELEMENT);
     return new array_type(bytes.buffer, 0, Number(length));
   };
 }
@@ -709,14 +708,39 @@ function readMap<TK, TV>(
   readValueFunc: (sink: Sink) => TV
 ): (sink: Sink) => Map<TK, TV> {
   return (sink: Sink) => {
-    let length = readU64(sink);
-
-    let output = new Map();
+    const length = readU64(sink);
+    const output = new Map();
 
     for (var i = 0; i < length; i++) {
       output.set(readKeyFunc(sink), readValueFunc(sink));
     }
 
     return output;
+  };
+}
+
+function writeTuple<T extends any[]>(
+  ...writeFns: Array<(value: any, sink: Sink) => Sink>
+): (value: T, sink: Sink) => Sink {
+  return (value: T, sink: Sink) => {
+    for (let i = 0; i < writeFns.length; i++) {
+      writeFns[i](value[i], sink);
+    }
+
+    return sink;
+  };
+}
+
+function readTuple<T extends any[]>(
+  ...readFns: Array<(sink: Sink) => any>
+): (sink: Sink) => T {
+  return (sink: Sink) => {
+    const out = new Array();
+
+    for (const readFn of readFns) {
+      out.push(readFn(sink));
+    }
+
+    return out as T;
   };
 }

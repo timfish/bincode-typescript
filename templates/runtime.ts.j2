@@ -282,7 +282,7 @@ function writeBytes(value: Uint8Array, sink: Sink): Sink {
 }
 
 function readBytes(sink: Sink, length: number): Uint8Array {
-  let bytes = sink.view.buffer.slice(sink.position, sink.position + length);
+  const bytes = sink.view.buffer.slice(sink.position, sink.position + length);
   sink.position += length;
   return new Uint8Array(bytes);
 }
@@ -296,7 +296,7 @@ function writeString(value: string, sink: Sink): Sink {
 
 function readString(sink: Sink): string {
   const length = readU64(sink);
-  let bytes = readBytes(sink, Number(length));
+  const bytes = readBytes(sink, Number(length));
   return textDecoder.decode(bytes);
 }
 
@@ -318,7 +318,7 @@ function readOption<T>(
   readFunc: (sink: Sink) => T
 ): (sink: Sink) => T | undefined {
   return (sink: Sink) => {
-    let some = readBool(sink);
+    const some = readBool(sink);
     if (!some) {
       return undefined;
     }
@@ -343,9 +343,8 @@ function writeSeq<T>(
 
 function readSeq<T>(readFunc: (sink: Sink) => T): (sink: Sink) => Array<T> {
   return (sink: Sink) => {
-    let length = readU64(sink);
-
-    let output = new Array();
+    const length = readU64(sink);
+    const output = new Array();
 
     for (var i = 0; i < length; i++) {
       output.push(readFunc(sink));
@@ -383,8 +382,8 @@ function readTypedArray<T extends TypedArray>(
   array_type: TypedArrayConstructor<T>
 ): (sink: Sink) => T {
   return (sink: Sink) => {
-    let length = readU64(sink);
-    let bytes = readBytes(sink, Number(length) * array_type.BYTES_PER_ELEMENT);
+    const length = readU64(sink);
+    const bytes = readBytes(sink, Number(length) * array_type.BYTES_PER_ELEMENT);
     return new array_type(bytes.buffer, 0, Number(length));
   };
 }
@@ -410,14 +409,39 @@ function readMap<TK, TV>(
   readValueFunc: (sink: Sink) => TV
 ): (sink: Sink) => Map<TK, TV> {
   return (sink: Sink) => {
-    let length = readU64(sink);
-
-    let output = new Map();
+    const length = readU64(sink);
+    const output = new Map();
 
     for (var i = 0; i < length; i++) {
       output.set(readKeyFunc(sink), readValueFunc(sink));
     }
 
     return output;
+  };
+}
+
+function writeTuple<T extends any[]>(
+  ...writeFns: Array<(value: any, sink: Sink) => Sink>
+): (value: T, sink: Sink) => Sink {
+  return (value: T, sink: Sink) => {
+    for (let i = 0; i < writeFns.length; i++) {
+      writeFns[i](value[i], sink);
+    }
+
+    return sink;
+  };
+}
+
+function readTuple<T extends any[]>(
+  ...readFns: Array<(sink: Sink) => any>
+): (sink: Sink) => T {
+  return (sink: Sink) => {
+    const out = new Array();
+
+    for (const readFn of readFns) {
+      out.push(readFn(sink));
+    }
+
+    return out as T;
   };
 }

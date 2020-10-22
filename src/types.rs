@@ -21,6 +21,7 @@ pub enum RustType {
     Option(Box<RustType>),
     Vec(Box<RustType>),
     TypedArray(Box<RustType>),
+    Tuple(Vec<RustType>),
     HashMap(Box<RustType>, Box<RustType>),
     User(String),
 }
@@ -61,6 +62,10 @@ impl RustType {
                 RustType::F64 => "Float64Array".to_string(),
                 _ => panic!("Typed arrays not supported for this underlying type"),
             },
+            RustType::Tuple(t) => format!(
+                "[{}]",
+                t.iter().map(|t| t.ts_type()).collect::<Vec<_>>().join(", ")
+            ),
             RustType::HashMap(k, v) => format!("Map<{}, {}>", k.ts_type(), v.ts_type()),
             RustType::User(t) => t.to_string(),
         }
@@ -87,6 +92,11 @@ impl RustType {
             RustType::Option(t) => format!("writeOption({})", t.writer()),
             RustType::Vec(t) => format!("writeSeq({})", t.writer()),
             RustType::TypedArray(_) => "writeTypedArray".to_string(),
+            RustType::Tuple(t) => format!(
+                "writeTuple<[{}]>({})",
+                t.iter().map(|t| t.ts_type()).collect::<Vec<_>>().join(", "),
+                t.iter().map(|t| t.writer()).collect::<Vec<_>>().join(", ")
+            ),
             RustType::HashMap(k, v) => format!("writeMap({}, {})", k.writer(), v.writer()),
             RustType::User(t) => format!("write{}", t),
         }
@@ -113,6 +123,11 @@ impl RustType {
             RustType::Option(t) => format!("readOption({})", t.reader()),
             RustType::Vec(t) => format!("readSeq({})", t.reader()),
             RustType::TypedArray(_) => format!("readTypedArray({0})", self.ts_type()),
+            RustType::Tuple(t) => format!(
+                "readTuple<[{}]>({})",
+                t.iter().map(|t| t.ts_type()).collect::<Vec<_>>().join(", "),
+                t.iter().map(|t| t.reader()).collect::<Vec<_>>().join(", ")
+            ),
             RustType::HashMap(k, v) => format!("readMap({}, {})", k.reader(), v.reader()),
             RustType::User(t) => format!("read{}", t),
         }
@@ -193,12 +208,14 @@ impl From<Type> for RustType {
             }
 
             if cur_types.len() != 1 {
-                panic!("Could not work out type");
+                panic!("Not one type remaining");
             }
 
             cur_types.pop().expect("Could not work out type")
+        } else if let Type::Tuple(path) = &t {
+            RustType::Tuple(path.elems.clone().into_iter().map(|t| t.into()).collect())
         } else {
-            panic!("Could not work out type");
+            panic!("Could not work out type: {:#?}", t);
         }
     }
 }

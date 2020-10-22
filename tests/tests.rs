@@ -6,7 +6,6 @@ mod test_round_trip {
 
     use super::test_types::*;
     use std::{
-        collections::HashMap,
         fmt::Debug,
         fs,
         io::Write,
@@ -130,12 +129,17 @@ function test(buffer: Buffer): api.Sink {{
             NamedStruct {
                 zero: Some(28),
                 one: 1.23,
-                two: 128,
+                two: (128, UnitEnum::Three),
                 three: "something".to_string(),
             },
             "
         let val = api.readNamedStruct(buffer);
-        let expected = { zero: 28, one: 1.23, two: 128, three: 'something' };
+        let expected = { 
+            zero: 28, 
+            one: 1.23, 
+            two: [128, api.UnitEnum.Three] as [number, api.UnitEnum], 
+            three: 'something' 
+        };
         assert.deepStrictEqual(val, expected);
 
         return api.writeNamedStruct(expected);
@@ -209,14 +213,19 @@ function test(buffer: Buffer): api.Sink {{
                 inner: NamedStruct {
                     zero: None,
                     one: 1.23,
-                    two: 128,
+                    two: (128, UnitEnum::Three),
                     three: "something".to_string(),
                 },
             },
             "
         let val = api.readSomeEvent(buffer);
         let expected = api.SomeEvent.NamedStruct({ 
-            inner: { zero: undefined, one: 1.23, two: 128, three: 'something' }
+            inner: { 
+                zero: undefined,
+                one: 1.23, 
+                two: [128, api.UnitEnum.Three] as [number, api.UnitEnum], 
+                three: 'something' 
+            }
         });
         assert.deepStrictEqual(val, expected);
 
@@ -246,9 +255,9 @@ function test(buffer: Buffer): api.Sink {{
         generate_and_run(
             SomeEvent::UnnamedHashMap(Some(
                 vec![
-                    ("One".to_string(), UnitEnum::One),
-                    ("Two".to_string(), UnitEnum::Two),
-                    ("Three".to_string(), UnitEnum::Three),
+                    ("One".to_string(), Some(UnitEnum::One)),
+                    ("Two".to_string(), Some(UnitEnum::Two)),
+                    ("Three".to_string(), Some(UnitEnum::Three)),
                 ]
                 .into_iter()
                 .collect(),

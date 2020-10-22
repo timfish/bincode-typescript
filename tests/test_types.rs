@@ -23,7 +23,7 @@ pub struct TupleStruct(pub i32, pub Vec<u32>);
 pub struct NamedStruct {
     pub zero: Option<u8>,
     pub one: f64,
-    pub two: u8,
+    pub two: (u8, UnitEnum),
     pub three: String,
 }
 
@@ -53,7 +53,7 @@ pub enum SomeEvent {
         interval: f64,
     },
     UnnamedWithStruct(NamedStruct),
-    UnnamedHashMap(Option<HashMap<String, UnitEnum>>),
+    UnnamedHashMap(Option<HashMap<String, Option<UnitEnum>>>),
     NamedStruct {
         inner: NamedStruct,
     },
