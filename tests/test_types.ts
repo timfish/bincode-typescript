@@ -208,15 +208,15 @@ export function readSomeEvent(sinkOrBuf: SinkOrBuf): SomeEvent {
     case 1:
       return SomeEvent.UnnamedSingle(
         readF32(sink), 
-        );
+      );
     case 2:
       return SomeEvent.UnnamedOptVec(
         readOption(readTypedArray(Uint8Array))(sink), 
-        );
+      );
     case 3:
       return SomeEvent.UnnamedSingleUnitEnum(
         readOption(readSeq(readUnitEnum))(sink), 
-        );
+      );
     case 4:
       return SomeEvent.UnnamedMultiple(
         readU8(sink),
@@ -232,24 +232,24 @@ export function readSomeEvent(sinkOrBuf: SinkOrBuf): SomeEvent {
         readUSize(sink),
         readISize(sink),
         readBool(sink), 
-        );
+      );
     case 5:
       return SomeEvent.Named({
         length: readUSize(sink),
         interval: readF64(sink),
-        });
+      });
     case 6:
       return SomeEvent.UnnamedWithStruct(
         readNamedStruct(sink), 
-        );
+      );
     case 7:
       return SomeEvent.UnnamedHashMap(
         readOption(readMap(readString, readOption(readUnitEnum)))(sink), 
-        );
+      );
     case 8:
       return SomeEvent.NamedStruct({
         inner: readNamedStruct(sink),
-        });
+      });
     default:
       throw new Error(`'${value}' is invalid value for enum 'SomeEvent'`);
   }

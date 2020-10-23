@@ -108,13 +108,13 @@ export function read{{ident}}(sinkOrBuf: SinkOrBuf): {{ident}} {
       {%- for ty in types %}
         {{ ty.reader() }}(sink),
       {%- endfor %} 
-        );
+      );
     {%- when EnumVariantDeclaration::Named with { ident, types } %}
       return {{type_variant}}.{{ident}}({
       {%- for (id, ty) in types %}
         {{ id }}: {{ ty.reader() }}(sink),
       {%- endfor %}
-        });
+      });
   {%- endmatch -%}
 {%- endfor %}
     default:

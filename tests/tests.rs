@@ -124,7 +124,7 @@ function test(buffer: Buffer): api.Sink {{
     }
 
     #[test]
-    fn named_struct() {
+    fn named_struct_with_tuple() {
         generate_and_run(
             NamedStruct {
                 zero: Some(28),
@@ -256,7 +256,7 @@ function test(buffer: Buffer): api.Sink {{
             SomeEvent::UnnamedHashMap(Some(
                 vec![
                     ("One".to_string(), Some(UnitEnum::One)),
-                    ("Two".to_string(), Some(UnitEnum::Two)),
+                    ("Two".to_string(), None),
                     ("Three".to_string(), Some(UnitEnum::Three)),
                 ]
                 .into_iter()
@@ -267,7 +267,7 @@ function test(buffer: Buffer): api.Sink {{
         let expected = api.SomeEvent.UnnamedHashMap(
             new Map([
                 ['One', api.UnitEnum.One], 
-                ['Two', api.UnitEnum.Two],
+                ['Two', undefined],
                 ['Three', api.UnitEnum.Three],
             ])
         );

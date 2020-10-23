@@ -52,9 +52,9 @@ impl<'ast> Visit<'ast> for CodeVisitor {
     }
 }
 
-pub fn from_string(input: &str, support_buffer: bool) -> Result<String, Box<dyn Error>> {
+pub fn from_string(input: &str, buffer_support: bool) -> Result<String, Box<dyn Error>> {
     let ast = syn::parse_file(input)?;
-    let mut enum_visit = CodeVisitor::new(support_buffer);
+    let mut enum_visit = CodeVisitor::new(buffer_support);
     enum_visit.visit_file(&ast);
 
     Ok(enum_visit.render()?)
@@ -63,11 +63,11 @@ pub fn from_string(input: &str, support_buffer: bool) -> Result<String, Box<dyn 
 pub fn from_file<P1: AsRef<Path>, P2: AsRef<Path>>(
     input: P1,
     output: P2,
-    support_buffer: bool,
+    buffer_support: bool,
 ) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(&output.as_ref().parent().unwrap())?;
     let rust = fs::read_to_string(input)?;
-    let typescript = from_string(&rust, support_buffer)?;
+    let typescript = from_string(&rust, buffer_support)?;
     fs::write(output, typescript)?;
 
     Ok(())

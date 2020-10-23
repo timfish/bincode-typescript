@@ -93,8 +93,8 @@ impl RustType {
             RustType::Vec(t) => format!("writeSeq({})", t.writer()),
             RustType::TypedArray(_) => "writeTypedArray".to_string(),
             RustType::Tuple(t) => format!(
-                "writeTuple<[{}]>({})",
-                t.iter().map(|t| t.ts_type()).collect::<Vec<_>>().join(", "),
+                "writeTuple<{}>({})",
+                self.ts_type(),
                 t.iter().map(|t| t.writer()).collect::<Vec<_>>().join(", ")
             ),
             RustType::HashMap(k, v) => format!("writeMap({}, {})", k.writer(), v.writer()),
@@ -122,10 +122,10 @@ impl RustType {
             RustType::String => "readString".to_string(),
             RustType::Option(t) => format!("readOption({})", t.reader()),
             RustType::Vec(t) => format!("readSeq({})", t.reader()),
-            RustType::TypedArray(_) => format!("readTypedArray({0})", self.ts_type()),
+            RustType::TypedArray(_) => format!("readTypedArray({})", self.ts_type()),
             RustType::Tuple(t) => format!(
-                "readTuple<[{}]>({})",
-                t.iter().map(|t| t.ts_type()).collect::<Vec<_>>().join(", "),
+                "readTuple<{}>({})",
+                self.ts_type(),
                 t.iter().map(|t| t.reader()).collect::<Vec<_>>().join(", ")
             ),
             RustType::HashMap(k, v) => format!("readMap({}, {})", k.reader(), v.reader()),
