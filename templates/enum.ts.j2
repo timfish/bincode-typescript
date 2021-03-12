@@ -1,5 +1,158 @@
-{% if self.is_unit() -%}
-  {% include "enum_unit.ts.j2" %}
-{% else -%}
-  {% include "enum_complex.ts.j2" %}
-{% endif %}
+export type {{ident}} =
+  {%- for (i, variant) in variants -%}
+    {%- match variant.value -%}
+      {%- when VariantFormat::Unit %}
+  | { tag: '{{variant.name}}' }
+      {%- when VariantFormat::NewType with (format) %}
+  | { tag: '{{variant.name}}'; value: {{ format.ts_type() }} }
+      {%- when VariantFormat::Tuple with (formats) %}
+  | { tag: '{{variant.name}}'; value: {{ident}}_{{variant.name}} }
+      {%- when VariantFormat::Struct with (formats) %}
+  | { tag: '{{variant.name}}'; value: {{ident}}_{{variant.name}} }
+      {% else %}
+    {%- endmatch -%}
+  {% endfor -%} 
+;
+
+ {%- for (i, variant) in variants -%}
+    {%- match variant.value -%}
+      {%- when VariantFormat::Tuple with (formats) %}
+export interface {{ident}}_{{variant.name}} {
+          {%- for format in formats %}
+  {{ loop.index - 1 }}: {{ format.ts_type() }};
+          {%- endfor %} 
+}
+      {% when VariantFormat::Struct with (formats) %}
+export interface {{ident}}_{{variant.name}} {
+          {%- for format in formats %}
+  {{ format.name }}: {{ format.value.ts_type() }};
+          {%- endfor %}
+}
+      {% else %}
+    {%- endmatch -%}
+  {% endfor %} 
+
+interface {{ident}}_MatchFull<Result> {
+  {%- for (i, variant) in variants -%}
+    {%- match variant.value -%}
+      {%- when VariantFormat::Unit %}
+  {{variant.name}}: () => Result;
+      {%- when VariantFormat::NewType with (format) %}
+  {{variant.name}}: (value: {{ format.ts_type() }}) => Result;
+      {%- when VariantFormat::Tuple with (formats) %}
+  {{variant.name}}: (value: {{ident}}_{{variant.name}}) => Result;
+      {%- when VariantFormat::Struct with (formats) %}
+  {{variant.name}}: (value: {{ident}}_{{variant.name}}) => Result;
+      {% else %}
+    {%- endmatch -%}
+  {%- endfor %} 
+}
+
+export module {{ident}} {
+  {%- for (i, variant) in variants -%}
+    {%- match variant.value -%}
+      {%- when VariantFormat::Unit %}
+  export const {{variant.name}}: {{ident}} = { tag: '{{variant.name}}' };
+      {%- when VariantFormat::NewType with (format) %}
+  export const {{variant.name}} = (value: {{ format.ts_type() }}): {{ident}} => ({ tag: '{{variant.name}}', value });
+      {%- when VariantFormat::Tuple with (formats) %}
+  export const {{variant.name}} = (
+          {%- for format in formats -%}
+              p{{loop.index - 1}}: {{ format.ts_type() }},
+          {%- endfor -%}
+  ): {{ident}} => ({ tag: '{{variant.name}}', value: [
+          {%- for format in formats -%}
+              p{{loop.index - 1}},
+          {%- endfor -%}
+  ] });
+      {%- when VariantFormat::Struct with (formats) %}
+  export const {{variant.name}} = (value: {{ident}}_{{variant.name}}): {{ident}} => ({ tag: '{{variant.name}}', value });
+      {%- else -%}
+    {%- endmatch -%}
+  {% endfor %} 
+
+  export const match = <Result>(
+    input: {{ident}},
+    match: MatchObj<{{ident}}_MatchFull<Result>, Result>
+  ): Result => {
+    const fn = match[input.tag];
+    if (fn) {
+      {% if self.is_unit() %}
+      return fn();
+      {% else %}
+      const param: any = "value" in input ? input.value : undefined;
+      return fn(param);
+      {% endif %}
+
+    } else if ("_" in match) {
+      return match._();
+    } else {
+      throw new Error(
+        `Missing match arm for '${input.tag}'. Add this or a wildcard match '_'`
+      );
+    }
+  }
+
+  export const serialize = (value: {{ident}}, bufferlike?: BufferLike): Sink => {
+    const sink = Sink.create(bufferlike);
+    switch(value.tag) {
+  {%- for (i, variant) in variants %}
+      case '{{variant.name}}':
+        serializeU32({{i}}, sink);
+    {%- match variant.value -%}
+      {%- when VariantFormat::Unit %}
+      {%- when VariantFormat::NewType with (format) %}
+        const val{{i}} = value as { value: {{ format.ts_type() }} };
+        {{ format.writer() }}(val{{i}}.value, sink);
+      {%- when VariantFormat::Tuple with (formats) %} 
+        const val{{i}} = value as { value: {{ident}}_{{variant.name}} };
+        {%- for format in formats %}
+        {{ format.writer() }}(val{{i}}.value[{{loop.index -1}}], sink);
+        {%- endfor %} 
+      {%- when VariantFormat::Struct with (formats) %}
+        const val{{i}} = value as { value: {{ident}}_{{variant.name}} };
+        {%- for format in formats %}
+        {{ format.value.writer() }}(val{{i}}.value.{{format.name}}, sink);
+        {%- endfor -%}
+      {%- else -%}
+    {%- endmatch %}
+        break;
+  {%- endfor %} 
+      default:
+        throw new Error(`'${(value as any).tag}' is invalid tag for enum '{{ident}}'`);
+    }
+
+    return sink;
+  }
+
+  export const deserialize = (bufferLike: BufferLike): {{ident}} => {
+    const sink = Sink.create(bufferLike);
+    const value = deserializeU32(sink);
+    switch (value) {
+  {%- for (i, variant) in variants %}
+      case {{i}}:
+    {%- match variant.value -%}
+      {%- when VariantFormat::Unit %} 
+        return {{ident}}.{{variant.name}};
+      {%- when VariantFormat::NewType with (format) %}
+        return {{ident}}.{{variant.name}}({{ format.reader() }}(sink));
+      {%- when VariantFormat::Tuple with (formats) %} 
+        return {{ident}}.{{variant.name}}(
+        {%- for format in formats %}
+          {{ format.reader() }}(sink),
+        {%- endfor %} 
+        );
+      {%- when VariantFormat::Struct with (formats) %}
+        return {{ident}}.{{variant.name}}({
+        {%- for format in formats %}
+          {{ format.name }}: {{ format.value.reader() }}(sink),
+        {%- endfor %}
+        });
+      {%- else -%}
+    {%- endmatch -%}
+  {%- endfor %}
+      default:
+        throw new Error(`'${value}' is invalid value for enum '{{ident}}'`);
+    }
+  }
+}

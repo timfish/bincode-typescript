@@ -1,0 +1,35 @@
+
+export interface {{ident}} {
+{%- for field in fields %}
+  {{ loop.index - 1 }}: {{ field.ts_type() }};
+{%- endfor %} 
+}
+
+export const {{ident}} = (
+    {%- for field in fields -%}
+      p{{loop.index - 1}}: {{ field.ts_type() }},
+    {%- endfor -%}
+): {{ident}} => {
+  return {
+    {%- for field in fields -%}
+      {{loop.index - 1}}: p{{loop.index - 1}},
+    {%- endfor -%}
+  }
+}
+
+{{ident}}.serialize = (value: {{ident}}, bufferLike?: BufferLike): Sink => {
+  const sink = Sink.create(bufferLike);
+{%- for field in fields %}
+  {{ field.writer() }}(value[{{loop.index - 1}}], sink);
+{%- endfor %} 
+  return sink;
+}
+
+{{ident}}.deserialize = (bufferLike: BufferLike): {{ident}} => {
+  const sink = Sink.create(bufferLike);
+  return {{ident}}(
+    {%- for field in fields %}
+    {{ field.reader() }}(sink),
+    {%- endfor %} 
+  );
+}

@@ -1,5 +1,8 @@
+use crate::test_types;
+
 #[cfg(test)]
 mod test_build {
+    use super::*;
     use std::process::Command;
 
     #[cfg(target_os = "windows")]
@@ -12,7 +15,11 @@ mod test_build {
         let dir = tempfile::tempdir_in("./tests").unwrap();
         let out_path = dir.path().join("api.ts");
 
-        bincode_typescript::from_file("./tests/test_types.rs", &out_path, true).unwrap();
+        let registry = test_types::trace_types();
+
+        let code = bincode_typescript::TemplateWriter::new(registry, true).to_string();
+        std::fs::write("tests/integration/test_types.ts", &code).unwrap();
+        std::fs::write(&out_path, &code).unwrap();
 
         let status = Command::new(TS_BIN)
             .args(&[
@@ -22,7 +29,6 @@ mod test_build {
                 "--noImplicitAny",
                 "--noImplicitReturns",
                 "--noFallthroughCasesInSwitch",
-                "--noUnusedLocals",
                 "--noUnusedParameters",
                 "--target",
                 "ES6",

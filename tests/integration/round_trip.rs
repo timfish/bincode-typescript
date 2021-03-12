@@ -1,10 +1,7 @@
-pub mod test_types;
-
 #[cfg(test)]
 mod test_round_trip {
+    use crate::test_types::*;
     use serde::{de::DeserializeOwned, Serialize};
-
-    use super::test_types::*;
     use std::{
         fmt::Debug,
         fs,
@@ -30,7 +27,7 @@ process.on('unhandledRejection', (error: Error) => {{
     process.exit(1);
 }});
 
-function test(buffer: Buffer): api.Sink {{
+function test(buffer: Buffer): any {{
     {}
 }}
 
@@ -56,7 +53,9 @@ function test(buffer: Buffer): api.Sink {{
         let gen_path = dir.path().join("generated.ts");
         let test_path = dir.path().join("test.ts");
 
-        bincode_typescript::from_file("./tests/test_types.rs", &gen_path, true).unwrap();
+        let registry = trace_types();
+        let code = bincode_typescript::TemplateWriter::new(registry, true).to_string();
+        std::fs::write(&gen_path, code).unwrap();
 
         let code = get_test_code(&gen_path, test_code);
         fs::write(&test_path, code).unwrap();
@@ -85,55 +84,40 @@ function test(buffer: Buffer): api.Sink {{
         generate_and_run(
             UnitEnum::Three,
             "
-        let val = api.readUnitEnum(buffer);
+        let val = api.UnitEnum.deserialize(buffer);
         let expected = api.UnitEnum.Three;
         assert.deepStrictEqual(val, expected);
 
-        return api.writeUnitEnum(api.UnitEnum.Three);
+        return api.UnitEnum.serialize(api.UnitEnum.Three);
         ",
         );
     }
 
     #[test]
-    fn unit_enum_valued() {
+    fn tuple() {
         generate_and_run(
-            UnitEnumNumbered::Eight,
+            SomeTuple(-145, vec![9987, 456]),
             "
-        let val = api.readUnitEnumNumbered(buffer);
-        let expected = api.UnitEnumNumbered.Eight;
-        assert.deepStrictEqual(val, expected);
-        assert.deepStrictEqual(val, 8);
-
-        return api.writeUnitEnumNumbered(expected);
-        ",
-        );
-    }
-
-    #[test]
-    fn tuple_struct() {
-        generate_and_run(
-            TupleStruct(-145, vec![9987, 456]),
-            "
-        let val = api.readTupleStruct(buffer);
-        let expected: api.TupleStruct = [-145, new Uint32Array([9987, 456])];
+        let val = api.SomeTuple.deserialize(buffer);
+        let expected = api.SomeTuple(-145, [9987, 456]);
         assert.deepStrictEqual(val, expected);
 
-        return api.writeTupleStruct(expected);
+        return api.SomeTuple.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn named_struct_with_tuple() {
+    fn some_struct() {
         generate_and_run(
-            NamedStruct {
+            SomeStruct {
                 zero: Some(28),
                 one: 1.23,
                 two: (128, UnitEnum::Three),
                 three: "something".to_string(),
             },
             "
-        let val = api.readNamedStruct(buffer);
+        let val = api.SomeStruct.deserialize(buffer);
         let expected = { 
             zero: 28, 
             one: 1.23, 
@@ -142,32 +126,32 @@ function test(buffer: Buffer): api.Sink {{
         };
         assert.deepStrictEqual(val, expected);
 
-        return api.writeNamedStruct(expected);
+        return api.SomeStruct.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn named_enum_variant() {
+    fn enum_struct() {
         generate_and_run(
-            SomeEvent::Named {
+            SomeEvent::Struct {
                 length: 34567,
                 interval: 0.0001,
             },
             "
-        let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.Named({ length: BigInt(34567), interval: 0.0001 });
+        let val = api.SomeEvent.deserialize(buffer);
+        let expected = api.SomeEvent.Struct({ length: BigInt(34567), interval: 0.0001 });
         assert.deepStrictEqual(val, expected);
 
-        return api.writeSomeEvent(expected);
+        return api.SomeEvent.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn unnamed_enum_many_numbers() {
+    fn enum_tuple_many_numbers() {
         generate_and_run(
-            SomeEvent::UnnamedMultiple(
+            SomeEvent::Tuple(
                 1,
                 -2,
                 3,
@@ -183,8 +167,8 @@ function test(buffer: Buffer): api.Sink {{
                 false,
             ),
             "
-        let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.UnnamedMultiple(
+        let val = api.SomeEvent.deserialize(buffer);
+        let expected = api.SomeEvent.Tuple(
             1, 
             -2, 
             3, 
@@ -201,16 +185,16 @@ function test(buffer: Buffer): api.Sink {{
         );
         assert.deepStrictEqual(val, expected);
 
-        return api.writeSomeEvent(expected);
+        return api.SomeEvent.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn named_struct_in_enum() {
+    fn struct_containing_struct() {
         generate_and_run(
-            SomeEvent::NamedStruct {
-                inner: NamedStruct {
+            SomeEvent::StructWithStruct {
+                inner: SomeStruct {
                     zero: None,
                     one: 1.23,
                     two: (128, UnitEnum::Three),
@@ -218,8 +202,8 @@ function test(buffer: Buffer): api.Sink {{
                 },
             },
             "
-        let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.NamedStruct({ 
+        let val = api.SomeEvent.deserialize(buffer);
+        let expected = api.SomeEvent.StructWithStruct({ 
             inner: { 
                 zero: undefined,
                 one: 1.23, 
@@ -229,31 +213,31 @@ function test(buffer: Buffer): api.Sink {{
         });
         assert.deepStrictEqual(val, expected);
 
-        return api.writeSomeEvent(expected);
+        return api.SomeEvent.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn unnamed_optional_vec() {
+    fn new_type_opt_vec() {
         generate_and_run(
-            SomeEvent::UnnamedOptVec(Some(vec![128; 1000])),
+            SomeEvent::NewTypeOptVec(Some(vec![128; 1000])),
             "
-        let val = api.readSomeEvent(buffer);
-        let arr = new Uint8Array(1000);
+        let val = api.SomeEvent.deserialize(buffer);
+        let arr = new Array(1000);
         arr.fill(128);
-        let expected = api.SomeEvent.UnnamedOptVec(arr);
+        let expected = api.SomeEvent.NewTypeOptVec(arr);
         assert.deepStrictEqual(val, expected);
 
-        return api.writeSomeEvent(expected);
+        return api.SomeEvent.serialize(expected);
         ",
         );
     }
 
     #[test]
-    fn hashmap() {
+    fn new_type_containing_hashmap() {
         generate_and_run(
-            SomeEvent::UnnamedHashMap(Some(
+            SomeEvent::NewTypeOptHashMap(Some(
                 vec![
                     ("One".to_string(), Some(UnitEnum::One)),
                     ("Two".to_string(), None),
@@ -263,8 +247,8 @@ function test(buffer: Buffer): api.Sink {{
                 .collect(),
             )),
             "
-        let val = api.readSomeEvent(buffer);
-        let expected = api.SomeEvent.UnnamedHashMap(
+        let val = api.SomeEvent.deserialize(buffer);
+        let expected = api.SomeEvent.NewTypeOptHashMap(
             new Map([
                 ['One', api.UnitEnum.One], 
                 ['Two', undefined],
@@ -273,7 +257,7 @@ function test(buffer: Buffer): api.Sink {{
         );
         assert.deepStrictEqual(val, expected);
 
-        return api.writeSomeEvent(expected);
+        return api.SomeEvent.serialize(expected);
         ",
         );
     }
